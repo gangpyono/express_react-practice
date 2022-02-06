@@ -12,13 +12,13 @@ const messageSchema = gql`
     id: ID!
     text: String!
     userId: ID!
-    timestamp: Float #13자리 숫자
+    timestamp: Float
   }
   extend type Query {
-    messages: [Message!]! # getMessages 
-    message(id: ID!): Message! # getMessage
+    messages: [Message!]!
+    message(id: ID!): Message!
   }
-  extend type Mutation {  Mutation : 변화를 이르키다.
+  extend type Mutation {
     createMessage(text: String!, userId: ID!): Message!
     updateMessage(id: ID!, text: String!, userId: ID!): Message!
     deleteMessage(id: ID!, userId: ID!): ID!
