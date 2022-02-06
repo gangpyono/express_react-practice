@@ -7,7 +7,7 @@ parent : parent 객체, 거의 사용x
 args : Query에 필요한 필드에 제공되는 인수(parameter)
 contenxt : 로그인한 사용자, DB Access 등의 중요한 정보들 
 */
-
+const setMsgs = (data) => writeDB("messages", data);
 const messageResolver = {
   Query: {
     messages: (parent, args, { db }) => {
@@ -18,81 +18,42 @@ const messageResolver = {
     },
   },
   Mutation: {
-    createMessage: () => {},
-    updateMessage: () => {},
-    deleteMessage: () => {},
+    createMessage: (parent, { text, userId }, { db }) => {
+      // rest API와는 달리 body에서 왔는지, params로왔는지,query로 왔는지 상관없이 args로 전부 받는다.
+      const newMsg = {
+        // 임의 id 생성
+        id: v4(),
+        text,
+        userId,
+        timestamp: Date.now(),
+      };
+      db.messages.unshift(newMsg);
+      setMsgs(db.messages); // DB에 등록
+      return newMsg;
+    },
+
+    updateMessage: (parent, { id, text, userId }, { db }) => {
+      const targetIndex = db.messages.findIndex((msg) => msg.id === id);
+      if (targetIndex < 0) throw Error("메시지가 없습니다.");
+      if (db.messages[targetIndex].userId !== userId)
+        throw Error("사용자가 다릅니다.");
+
+      const newMsg = { ...db.messages[targetIndex], text };
+      db.messages.splice(targetIndex, 1, newMsg); // DB에 저장될 새로운 messages.
+      setMsgs(db.messages); // DB에 등록
+      return newMsg; // 변경된 message를 클라이언트에게 보내준다.
+    },
+    deleteMessage: (parent, { id, userId }, { db }) => {
+      const targetIndex = db.messages.findIndex((msg) => msg.id === id);
+      if (targetIndex < 0) throw "메시지가 없습니다.";
+      if (db.messages[targetIndex].userId !== userId)
+        throw "사용자가 다릅니다.";
+
+      db.messages.splice(targetIndex, 1);
+      setMsgs(db.messages);
+      return id;
+    },
   },
 };
-const getMsgs = () => readDB("messages");
-const setMsgs = (data) => writeDB("messages", data);
 
-const messagesRoute = [
-  {
-    // CREATE MESSAGE
-    method: "post",
-    route: "/messages",
-    handler: ({ body }, res) => {
-      try {
-        if (!body.userId) throw Error("no userId"); // 유저 아이디가 없을경우 에러를 발생시킨다.
-        const msgs = getMsgs();
-        const newMsg = {
-          // 임의 id 생성
-          id: v4(),
-          text: body.text,
-          userId: body.userId,
-          timestamp: Date.now(),
-        };
-
-        msgs.unshift(newMsg); // DB에 추가할 메세지를 포함한 전체 messages.
-        setMsgs(msgs); // DB에 등록
-        res.send(newMsg); // 새로 만들어진 message를 클라이언트에게 보내준다.
-      } catch (error) {
-        res.status(500).send({ error: err });
-      }
-    },
-  },
-
-  {
-    // UPDATE MESSAGE
-    method: "put",
-    route: "/messages/:id",
-    handler: ({ body, params: { id } }, res) => {
-      try {
-        const msgs = getMsgs();
-        const targetIndex = msgs.findIndex((msg) => msg.id === id);
-        if (targetIndex < 0) throw "메시지가 없습니다.";
-        if (msgs[targetIndex].userId !== body.userId)
-          throw "사용자가 다릅니다.";
-
-        const newMsg = { ...msgs[targetIndex], text: body.text };
-        msgs.splice(targetIndex, 1, newMsg); // DB에 저장될 새로운 messages.
-        setMsgs(msgs); // DB에 등록
-        res.send(newMsg); // 변경된 message를 클라이언트에게 보내준다.
-      } catch (err) {
-        res.status(500).send({ error: err });
-      }
-    },
-  },
-  {
-    // DELETE MESSAGE
-    method: "delete",
-    route: "/messages/:id",
-    handler: ({ params: { id }, query: { userId } }, res) => {
-      //delete는 body가 없어 config로 전달된다. 따라서 params가 아닌 query로 전달된다.
-      try {
-        const msgs = getMsgs();
-        const targetIndex = msgs.findIndex((msg) => msg.id === id);
-        if (targetIndex < 0) throw "메시지가 없습니다.";
-        if (msgs[targetIndex].userId !== userId) throw "사용자가 다릅니다.";
-
-        msgs.splice(targetIndex, 1);
-        setMsgs(msgs);
-        res.send(id);
-      } catch (err) {
-        res.status(500).send({ error: err });
-      }
-    },
-  },
-];
-
-export default messagesRoute;
+export default messageResolver;
