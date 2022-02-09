@@ -26,6 +26,8 @@ server.applyMiddleware({
   app,
   path: "/graphql",
   cors: {
+    //localhost:8000/graphql 에 접속하면 play ground에 접속할 수 있다.
+    // graphql play ground 접속을 위해 추가.
     origin: ["http://localhost:3000", "https://studio.apollographql.com"],
     credentials: true,
   },
