@@ -9,7 +9,7 @@ const MsgInput = ({ mutate, text = "", id = undefined }) => {
     e.stopPropagation(); // 이벤트 캡처링 버블링 전파 방지
     const text = textRef.current.value;
     textRef.current.value = "";
-    mutate(text, id);
+    mutate({ text, id });
   };
 
   return (
